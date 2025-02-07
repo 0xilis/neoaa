@@ -69,16 +69,17 @@ void list_neo_aa_files(const char *inputPath) {
         NeoAAArchiveItem item = archive->items[i];
         NeoAAHeader header = item->header;
         int index = neo_aa_header_get_field_key_index(header, NEO_AA_FIELD_C("PAT"));
-        if (index != -1) {
-            /* If index is not -1, then header has PAT field key */
-            char *patStr = neo_aa_header_get_field_key_string(header, index);
-            if (patStr) {
-                printf("%s\n",patStr);
-                free(patStr);
-            } else {
-                printf("Could not get PAT entry in header\n");
-            }
+        if (index == -1) {
+            continue;
         }
+        /* If index is not -1, then header has PAT field key */
+        char *patStr = neo_aa_header_get_field_key_string(header, index);
+        if (patStr) {
+            printf("Could not get PAT entry in header\n");
+            continue;
+        }
+        printf("%s\n",patStr);
+        free(patStr);
     }
 }
 
@@ -258,27 +259,28 @@ void unwrap_file_out_of_neo_aa(const char *inputPath, const char *outputPath, ch
         NeoAAArchiveItem item = archive->items[i];
         NeoAAHeader header = item->header;
         int index = neo_aa_header_get_field_key_index(header, NEO_AA_FIELD_C("PAT"));
-        if (index != -1) {
-            /* If index is not -1, then header has PAT field key */
-            char *patStr = neo_aa_header_get_field_key_string(header, index);
-            if (patStr) {
-                if (strncmp(pathString,patStr,strlen(patStr)) == 0) {
-                    free(patStr);
-                    /* Unwrap file */
-                    FILE *fp = fopen(outputPath, "w");
-                    if (!fp) {
-                        fprintf(stderr,"Failed to open outputPath.\n");
-                        return;
-                    }
-                    fwrite(item->encodedBlobData, item->encodedBlobDataSize, 1, fp);
-                    fclose(fp);
-                    return;
-                }
-                free(patStr);
-            } else {
-                printf("Could not get PAT entry in header\n");
-            }
+        if (index == -1) {
+            continue;
         }
+        /* If index is not -1, then header has PAT field key */
+        char *patStr = neo_aa_header_get_field_key_string(header, index);
+        if (!patStr) {
+            printf("Could not get PAT entry in header\n");
+            continue;
+        }
+        if (strncmp(pathString,patStr,strlen(patStr)) == 0) {
+            free(patStr);
+            /* Unwrap file */
+            FILE *fp = fopen(outputPath, "w");
+            if (!fp) {
+                fprintf(stderr,"Failed to open outputPath.\n");
+                return;
+            }
+            fwrite(item->encodedBlobData, item->encodedBlobDataSize, 1, fp);
+            fclose(fp);
+            return;
+        }
+        free(patStr);
     }
     printf("Could not find file at the specified path in the project.\n");
 }
