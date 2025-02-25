@@ -1,17 +1,17 @@
-//
-//  main.c
-//  neoaa
-//
-//  Created by Snoolie Keffaber on 2024/06/29.
-//
+/*
+ *  main.c
+ *  neoaa
+ *
+ *  Created by Snoolie Keffaber on 2024/06/29.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
 #include <libgen.h>
-#include "../lib/libNeoAppleArchive.h"
-#include "../lib/compression/lzfse/lzfse.h"
+#include "../lib/libNeoAppleArchive/libNeoAppleArchive.h"
+#include "../lib/build/lzfse/include/lzfse.h"
 
 #define OPTSTR "i:o:a:p:hv"
 
@@ -36,7 +36,7 @@ extern char *optarg;
 void show_help(void) {
     printf("Usage: neoaa command <options>\n\n");
     printf("Commands:\n\n");
-    printf(" archive: archive the contents of a directory.\n");
+    /* printf(" archive: archive the contents of a directory.\n"); */
     printf(" extract: extract files from an archive.\n");
     printf(" list: list the contents of an archive.\n");
     printf(" wrap: archive a singular file.\n");
