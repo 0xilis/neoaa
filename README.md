@@ -12,9 +12,10 @@ Unfinished, however `neoaa list` is complete, allowing you to list files in `.aa
 
 # Building on Linux
 
-Tested on Arch Linux.
+Tested on Arch Linux. `cd` to the directory and then `make`. You will need `clang` and `ar` installed. `gcc` is untested but if you want to build with it instead theoretically you can just specify CC=gcc.
 
-Go to [https://github.com/lzfse/lzfse](https://github.com/lzfse/lzfse) and swap out liblzfse.a with a version compiled for Linux, then build like macOS.
+* Static library: `build/usr/lib/libNeoAppleArchive.a`
+* CLI tool: `build/usr/bin/neoaa`
 
 # CLI Usage
 
