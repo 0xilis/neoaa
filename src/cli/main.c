@@ -74,7 +74,7 @@ void list_neo_aa_files(const char *inputPath) {
         }
         /* If index is not -1, then header has PAT field key */
         char *patStr = neo_aa_header_get_field_key_string(header, index);
-        if (patStr) {
+        if (!patStr) {
             printf("Could not get PAT entry in header\n");
             continue;
         }
