@@ -102,13 +102,13 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
     /* Crete the NeoAAArchiveItem item */
     NeoAAArchiveItem item = neo_aa_archive_item_create_with_header(header);
     if (!item) {
-        neo_aa_header_destroy(header);
+        neo_aa_header_destroy_nozero(header);
         fprintf(stderr,"Failed to create item\n");
         return;
     }
     FILE *fp = fopen(addPath, "r");
     if (!fp) {
-        neo_aa_archive_item_destroy(item);
+        neo_aa_archive_item_destroy_nozero(item);
         fprintf(stderr,"Failed to open input path\n");
         return;
     }
@@ -119,11 +119,10 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
     uint8_t *data = malloc(binarySize);
     if (!data) {
         fclose(fp);
-        neo_aa_archive_item_destroy(item);
+        neo_aa_archive_item_destroy_nozero(item);
         fprintf(stderr,"Not enough memory to allocate file into memory\n");
         return;
     }
-    memset(data, 0, binarySize);
     ssize_t bytesRead = fread(data, binarySize, 1, fp);
     fclose(fp);
     if (bytesRead < binarySize) {
@@ -146,7 +145,7 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
     /* Make NeoAAArchivePlain from inputPath */
     NeoAAArchiveGeneric plainInputArchive = neo_aa_archive_generic_from_path(inputPath);
     if (!plainInputArchive) {
-        neo_aa_archive_item_destroy(item);
+        neo_aa_archive_item_destroy_nozero(item);
         fprintf(stderr,"Not enough memory to make NeoAAArchiveGeneric\n");
         return;
     }
@@ -157,8 +156,8 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
     itemList[rawInput->itemCount] = item;
     free(plainInputArchive);
     NeoAAArchivePlain archive = neo_aa_archive_plain_create_with_items(itemList, 1);
-    neo_aa_archive_item_destroy(item);
-    neo_aa_archive_plain_destroy(rawInput);
+    neo_aa_archive_item_destroy_nozero(item);
+    neo_aa_archive_plain_destroy_nozero(rawInput);
     if (!archive) {
         fprintf(stderr,"Failed to create NeoAAArchivePlain\n");
         return;
@@ -189,13 +188,13 @@ void wrap_file_in_neo_aa(const char *inputPath, const char *outputPath, NeoAACom
     /* Crete the NeoAAArchiveItem item */
     NeoAAArchiveItem item = neo_aa_archive_item_create_with_header(header);
     if (!item) {
-        neo_aa_header_destroy(header);
+        neo_aa_header_destroy_nozero(header);
         fprintf(stderr,"Failed to create item\n");
         return;
     }
     FILE *fp = fopen(inputPath, "r");
     if (!fp) {
-        neo_aa_archive_item_destroy(item);
+        neo_aa_archive_item_destroy_nozero(item);
         fprintf(stderr,"Failed to open input path\n");
         return;
     }
@@ -206,15 +205,14 @@ void wrap_file_in_neo_aa(const char *inputPath, const char *outputPath, NeoAACom
     uint8_t *data = malloc(binarySize);
     if (!data) {
         fclose(fp);
-        neo_aa_archive_item_destroy(item);
+        neo_aa_archive_item_destroy_nozero(item);
         fprintf(stderr,"Not enough memory to allocate file into memory\n");
         return;
     }
-    memset(data, 0, binarySize);
     ssize_t bytesRead = fread(data, 1, binarySize, fp);
     fclose(fp);
     if (bytesRead < binarySize) {
-        neo_aa_archive_item_destroy(item);
+        neo_aa_archive_item_destroy_nozero(item);
         fprintf(stderr,"Failed to read the entire file\n");
         return;
     }
@@ -230,8 +228,7 @@ void wrap_file_in_neo_aa(const char *inputPath, const char *outputPath, NeoAACom
     neo_aa_archive_item_add_blob_data(item, (char *)data, binarySize);
     free(data);
     NeoAAArchiveItem *itemList = &item;
-    NeoAAArchivePlain archive = neo_aa_archive_plain_create_with_items(itemList, 1);
-    neo_aa_archive_item_destroy(item);
+    NeoAAArchivePlain archive = neo_aa_archive_plain_create_with_items_nocopy(itemList, 1);
     if (!archive) {
         fprintf(stderr,"Failed to create NeoAAArchivePlain\n");
         return;

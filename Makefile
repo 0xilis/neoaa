@@ -13,7 +13,7 @@ output: $(buildDir)
 	@mv src/lib/build/usr/lib/libNeoAppleArchive.a build/usr/lib/libNeoAppleArchive.a
 
 	@ # Build neoaa CLI tool
-	@$(CC) src/cli/*.c build/usr/lib/libNeoAppleArchive.a src/lib/build/lzfse/lib/liblzfse.a -o build/usr/bin/neoaa -lz -Os
+	@$(CC) src/cli/*.c -Lbuild/usr/lib -Lsrc/lib/build/lzfse/lib -Lsrc/lib/build/libzbitmap/lib -o build/usr/bin/neoaa -llzfse -lzbitmap -lNeoAppleArchive -lz -Os
 
 $(buildDir):
 	@echo "Creating Build Directory"
