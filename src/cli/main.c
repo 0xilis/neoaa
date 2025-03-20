@@ -10,8 +10,8 @@
 #include <string.h>
 #include <getopt.h>
 #include <libgen.h>
-#include "../lib/libNeoAppleArchive/libNeoAppleArchive.h"
-#include "../lib/build/lzfse/include/lzfse.h"
+#include <libNeoAppleArchive.h>
+#include <lzfse.h>
 
 #define OPTSTR "i:o:a:p:hv"
 
@@ -93,7 +93,7 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
     /* Declare our file as, well, a file */
     neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("TYP"), 1, 'F');
     /* Declare our PAT to be our file name */
-    neo_aa_header_add_field_string(header, NEO_AA_FIELD_C("PAT"), strlen(fileName), fileName);
+    neo_aa_header_set_field_string(header, NEO_AA_FIELD_C("PAT"), strlen(fileName), fileName);
     /* Set other field keys */
     neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("UID"), 2, 0x1F5);
     neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("GID"), 1, 0x14);
@@ -179,7 +179,7 @@ void wrap_file_in_neo_aa(const char *inputPath, const char *outputPath, NeoAACom
     /* Declare our file as, well, a file */
     neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("TYP"), 1, 'F');
     /* Declare our PAT to be our file name */
-    neo_aa_header_add_field_string(header, NEO_AA_FIELD_C("PAT"), strlen(fileName), fileName);
+    neo_aa_header_set_field_string(header, NEO_AA_FIELD_C("PAT"), strlen(fileName), fileName);
     /* Set other field keys */
     neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("UID"), 2, 0x1F5);
     neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("GID"), 1, 0x14);
@@ -357,9 +357,6 @@ int main(int argc, const char * argv[]) {
         /* Default compression is LZFSE */
         compress = NEOAA_COMPRESS_LZFSE;
     }
-
-    /* Test CLI tool */
-    neo_aa_archive_item_destroy(neo_aa_archive_item_create_with_header(neo_aa_header_create()));
     
     /* NEOAA_CMD_VERSION is the only command where inputPath is not needed */
     if (NEOAA_CMD_VERSION == neoaaCommand) {

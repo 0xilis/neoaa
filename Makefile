@@ -1,5 +1,6 @@
 buildDir = build
 CC = clang
+CFLAGS += -Os -Isrc/lib/libNeoAppleArchive -Isrc/lib/build/lzfse/include
 
 LZFSE_DIR = src/lib/libNeoAppleArchive/compression/lzfse
 BUILD_LZFSE_DIR = ../../../build/lzfse
@@ -13,10 +14,11 @@ output: $(buildDir)
 	@mv src/lib/build/usr/lib/libNeoAppleArchive.a build/usr/lib/libNeoAppleArchive.a
 
 	@ # Build neoaa CLI tool
-	@$(CC) src/cli/*.c -Lbuild/usr/lib -Lsrc/lib/build/lzfse/lib -Lsrc/lib/build/libzbitmap/lib -o build/usr/bin/neoaa -llzfse -lzbitmap -lNeoAppleArchive -lz -Os
+	@echo "building neoaa..."
+	@$(CC) src/cli/*.c -Lbuild/usr/lib -Lsrc/lib/build/lzfse/lib -Lsrc/lib/build/libzbitmap/lib -o build/usr/bin/neoaa -llzfse -lzbitmap -lNeoAppleArchive -lz $(CFLAGS)
 
 $(buildDir):
 	@echo "Creating Build Directory"
 	mkdir -p build/usr/lib
-	mkdir build/usr/bin
-	mkdir build/obj
+	mkdir -p build/usr/bin
+	mkdir -p build/obj
