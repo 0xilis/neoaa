@@ -11,9 +11,16 @@
 #include <getopt.h>
 #include <libgen.h>
 #include <libNeoAppleArchive.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <lzfse.h>
 
-#define OPTSTR "i:o:a:p:hv"
+#if !(defined(_WIN32) || defined(WIN32))
+#include <sys/types.h>
+#endif
+
+#define OPTSTR "i:o:a:p:f:hv"
 
 typedef enum {
     NEOAA_CMD_ARCHIVE,
@@ -36,7 +43,7 @@ extern char *optarg;
 void show_help(void) {
     printf("Usage: neoaa command <options>\n\n");
     printf("Commands:\n\n");
-    /* printf(" archive: archive the contents of a directory.\n"); */
+    printf(" archive: archive the contents of a directory.\n");
     printf(" extract: extract files from an archive.\n");
     printf(" list: list the contents of an archive.\n");
     printf(" wrap: archive a singular file.\n");
@@ -47,8 +54,8 @@ void show_help(void) {
     printf(" -i: path to the input file or directory.\n");
     printf(" -o: path to the output file or directory.\n");
     printf(" -a: algorithm for compression, lzfse (default), zlib, raw (no compression).\n");
-    printf(" -p: specify path of file in project to unwrap or add.\n");
-    printf(" -f: path of file to add to the .aar specified in -i.\n");
+    printf(" -p: specify path of file in project to unwrap.\n");
+    /* printf(" -f: path of file to add to the .aar specified in -i.\n"); */
     printf(" -h: this ;-)\n");
     printf("\n");
 }
@@ -106,7 +113,7 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
         fprintf(stderr,"Failed to create item\n");
         return;
     }
-    FILE *fp = fopen(addPath, "r");
+    FILE *fp = fopen(addPath, "rb");
     if (!fp) {
         neo_aa_archive_item_destroy_nozero(item);
         fprintf(stderr,"Failed to open input path\n");
@@ -282,6 +289,145 @@ void unwrap_file_out_of_neo_aa(const char *inputPath, const char *outputPath, ch
     printf("Could not find file at the specified path in the project.\n");
 }
 
+/* TODO: Experimental */
+void create_aar_from_directory(const char *dirPath, const char *outputPath) {
+    DIR *dir = opendir(dirPath);
+    if (!dir) {
+        fprintf(stderr, "Failed to open directory: %s\n", dirPath);
+        return;
+    }
+
+    struct dirent *entry;
+    size_t itemsCount = 0;
+    NeoAAArchiveItem *items = malloc(sizeof(NeoAAArchiveItem) * 100);  /* Initial allocation for up to 100 items */
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;  /* Skip "." and ".." */
+
+        char filePath[1024];
+        snprintf(filePath, sizeof(filePath), "%s/%s", dirPath, entry->d_name);
+
+        struct stat fileStat;
+        if (stat(filePath, &fileStat) < 0) {
+            perror("stat failed");
+            continue;
+        }
+
+        NeoAAHeader header = neo_aa_header_create();
+        if (!header) {
+            fprintf(stderr, "Failed to create header for %s\n", entry->d_name);
+            continue;
+        }
+
+#if !(defined(_WIN32) || defined(WIN32))
+        /* Retrieve and store UID/GID if not on Windows */
+        if (S_ISREG(fileStat.st_mode) || S_ISDIR(fileStat.st_mode) || S_ISLNK(fileStat.st_mode)) {
+            if (fileStat.st_uid != (uid_t)-1) {
+                neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("UID"), 2, (unsigned short)fileStat.st_uid);  /* 2-byte field */
+            }
+            if (fileStat.st_gid != (gid_t)-1) {
+                neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("GID"), 1, (unsigned char)fileStat.st_gid);  /* 1-byte field */
+            }
+        }
+#endif
+
+        if (S_ISDIR(fileStat.st_mode)) {
+            /* Directory */
+            neo_aa_header_set_field_string(header, NEO_AA_FIELD_C("PAT"), strlen(entry->d_name), entry->d_name);
+            neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("TYP"), 1, 'D');
+        } else if (S_ISLNK(fileStat.st_mode)) {
+#if !(defined(_WIN32) || defined(WIN32))
+            /* Symlink (not supported on Windows) */
+            char symlinkTarget[1024];
+            ssize_t len = readlink(filePath, symlinkTarget, sizeof(symlinkTarget) - 1);
+            if (len < 0) {
+                perror("readlink failed");
+                neo_aa_header_destroy(header);
+                continue;
+            }
+            symlinkTarget[len] = '\0';  /* Null-terminate the string */
+            neo_aa_header_set_field_string(header, NEO_AA_FIELD_C("LNK"), strlen(symlinkTarget), symlinkTarget);
+            neo_aa_header_set_field_string(header, NEO_AA_FIELD_C("PAT"), strlen(entry->d_name), entry->d_name);
+            neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("TYP"), 1, 'L');
+#endif
+        } else if (S_ISREG(fileStat.st_mode)) {
+            /* Regular file */
+            FILE *file = fopen(filePath, "rb");
+            if (!file) {
+                perror("Failed to open file");
+                neo_aa_header_destroy(header);
+                continue;
+            }
+
+            /* Read the file content into a buffer */
+            fseek(file, 0, SEEK_END);
+            size_t fileSize = ftell(file);
+            rewind(file);
+            unsigned char *fileData = malloc(fileSize);
+            if (!fileData) {
+                fprintf(stderr, "Memory allocation failed for file data\n");
+                fclose(file);
+                neo_aa_header_destroy(header);
+                continue;
+            }
+
+            fread(fileData, 1, fileSize, file);
+            fclose(file);
+
+            /* Set the PAT and TYP fields */
+            neo_aa_header_set_field_string(header, NEO_AA_FIELD_C("PAT"), strlen(entry->d_name), entry->d_name);
+            neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("TYP"), 1, 'F');
+
+            /* Set the DAT field and add the file data as a blob */
+            neo_aa_header_set_field_blob(header, NEO_AA_FIELD_C("DAT"), 0, fileSize);
+            NeoAAArchiveItem item = neo_aa_archive_item_create_with_header(header);
+            if (!item) {
+                fprintf(stderr, "Failed to create archive item for file: %s\n", entry->d_name);
+                free(fileData);
+                neo_aa_header_destroy(header);
+                continue;
+            }
+
+            neo_aa_archive_item_add_blob_data(item, (char *)fileData, fileSize);
+            items[itemsCount++] = item;
+
+            free(fileData);
+        }
+
+        /* Create archive item for directories and symlinks as well */
+        if (S_ISDIR(fileStat.st_mode) || S_ISLNK(fileStat.st_mode)) {
+            NeoAAArchiveItem item = neo_aa_archive_item_create_with_header(header);
+            if (!item) {
+                fprintf(stderr, "Failed to create archive item for directory/symlink: %s\n", entry->d_name);
+                neo_aa_header_destroy(header);
+                continue;
+            }
+
+            items[itemsCount++] = item;
+        }
+    }
+
+    closedir(dir);
+
+    /* Now create the archive with all the items */
+    if (itemsCount > 0) {
+        NeoAAArchivePlain archive = neo_aa_archive_plain_create_with_items(items, itemsCount);
+        if (!archive) {
+            fprintf(stderr, "Failed to create archive from items\n");
+            neo_aa_archive_item_list_destroy_nozero(items, itemsCount);
+            return;
+        }
+
+        /* Write archive to a file (you can adjust the file path as needed) */
+        neo_aa_archive_plain_write_path(archive, outputPath);
+        neo_aa_archive_plain_destroy_nozero(archive);
+    }
+
+    /* Cleanup */
+    neo_aa_archive_item_list_destroy_nozero(items, itemsCount);
+}
+
 int main(int argc, const char * argv[]) {
     if (argc < 2) {
         show_help();
@@ -401,6 +547,12 @@ int main(int argc, const char * argv[]) {
             return 0;
         }
         neo_aa_extract_aar_to_path(inputPath, outputPath);
+    } else if (NEOAA_CMD_ARCHIVE == neoaaCommand) {
+        if (!outputPath) {
+            printf("No -o specified.\n");
+            return 0;
+        }
+        create_aar_from_directory(inputPath, outputPath);
     }
     return 0;
 }
