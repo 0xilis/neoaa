@@ -139,13 +139,7 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
     }
     
     /* Handle other than RAW later */
-    if (binarySize < USHRT_MAX) {
-        neo_aa_header_set_field_blob(header, NEO_AA_FIELD_C("DAT"), 2, binarySize);
-    } else if (binarySize < UINT32_MAX) {
-        neo_aa_header_set_field_blob(header, NEO_AA_FIELD_C("DAT"), 4, binarySize);
-    } else {
-        neo_aa_header_set_field_blob(header, NEO_AA_FIELD_C("DAT"), 8, binarySize);
-    }
+    neo_aa_header_set_field_blob(header, NEO_AA_FIELD_C("DAT"), 0, binarySize);
     neo_aa_archive_item_add_blob_data(item, (char *)data, binarySize);
     free(data);
     
@@ -225,13 +219,7 @@ void wrap_file_in_neo_aa(const char *inputPath, const char *outputPath, NeoAACom
     }
     
     /* Handle other than RAW later */
-    if (binarySize < USHRT_MAX) {
-        neo_aa_header_set_field_blob(header, NEO_AA_FIELD_C("DAT"), 2, binarySize);
-    } else if (binarySize < UINT32_MAX) {
-        neo_aa_header_set_field_blob(header, NEO_AA_FIELD_C("DAT"), 4, binarySize);
-    } else {
-        neo_aa_header_set_field_blob(header, NEO_AA_FIELD_C("DAT"), 8, binarySize);
-    }
+    neo_aa_header_set_field_blob(header, NEO_AA_FIELD_C("DAT"), 0, binarySize);
     neo_aa_archive_item_add_blob_data(item, (char *)data, binarySize);
     free(data);
     NeoAAArchiveItem *itemList = &item;
