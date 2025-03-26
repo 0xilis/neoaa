@@ -288,11 +288,21 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
 
     struct dirent *entry;
     size_t itemsCount = 0;
-    NeoAAArchiveItem *items = malloc(sizeof(NeoAAArchiveItem) * 100);  /* Initial allocation for up to 100 items */
+    uint32_t itemsMalloc = 100;
+    NeoAAArchiveItem *items = malloc(sizeof(NeoAAArchiveItem) * itemsMalloc);  /* Initial allocation for up to 100 items */
 
     while ((entry = readdir(dir)) != NULL) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;  /* Skip "." and ".." */
+        }
+
+        if (itemsCount == itemsMalloc) {
+            itemsMalloc *= 2;
+            items = realloc(items, sizeof(NeoAAArchiveItem) * itemsMalloc);
+            if (!items) {
+                fprintf(stderr, "ran out of memory to alloc items\n");
+                return;
+            }
         }
 
         char filePath[1024];
@@ -412,7 +422,7 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
 
     /* Now create the archive with all the items */
     if (itemsCount > 0) {
-        NeoAAArchivePlain archive = neo_aa_archive_plain_create_with_items(items, itemsCount);
+        NeoAAArchivePlain archive = neo_aa_archive_plain_create_with_items_nocopy(items, itemsCount);
         if (!archive) {
             fprintf(stderr, "Failed to create archive from items\n");
             neo_aa_archive_item_list_destroy_nozero(items, itemsCount);
@@ -422,10 +432,9 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
         /* Write archive to a file (you can adjust the file path as needed) */
         neo_aa_archive_plain_write_path(archive, outputPath);
         neo_aa_archive_plain_destroy_nozero(archive);
+    } else {
+        free(items);
     }
-
-    /* Cleanup */
-    neo_aa_archive_item_list_destroy_nozero(items, itemsCount);
 }
 
 int main(int argc, const char * argv[]) {
