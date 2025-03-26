@@ -14,6 +14,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <lzfse.h>
 
 #if !(defined(_WIN32) || defined(WIN32))
@@ -290,21 +291,30 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
     NeoAAArchiveItem *items = malloc(sizeof(NeoAAArchiveItem) * 100);  /* Initial allocation for up to 100 items */
 
     while ((entry = readdir(dir)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;  /* Skip "." and ".." */
+        }
 
         char filePath[1024];
         snprintf(filePath, sizeof(filePath), "%s/%s", dirPath, entry->d_name);
 
+        int fd = open(filePath, O_RDONLY);
+        if (fd < 0) {
+            perror("Failed to open file");
+            continue;
+        }
+
         struct stat fileStat;
-        if (stat(filePath, &fileStat) < 0) {
-            perror("stat failed");
+        if (fstat(fd, &fileStat) < 0) {
+            perror("Failed to get file info");
+            close(fd);
             continue;
         }
 
         NeoAAHeader header = neo_aa_header_create();
         if (!header) {
             fprintf(stderr, "Failed to create header for %s\n", entry->d_name);
+            close(fd);
             continue;
         }
 
@@ -331,6 +341,7 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
             ssize_t len = readlink(filePath, symlinkTarget, sizeof(symlinkTarget) - 1);
             if (len < 0) {
                 perror("readlink failed");
+                close(fd);
                 neo_aa_header_destroy(header);
                 continue;
             }
@@ -341,27 +352,24 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
 #endif
         } else if (S_ISREG(fileStat.st_mode)) {
             /* Regular file */
-            FILE *file = fopen(filePath, "rb");
-            if (!file) {
-                perror("Failed to open file");
-                neo_aa_header_destroy(header);
-                continue;
-            }
-
-            /* Read the file content into a buffer */
-            fseek(file, 0, SEEK_END);
-            size_t fileSize = ftell(file);
-            rewind(file);
+            size_t fileSize = fileStat.st_size;
             unsigned char *fileData = malloc(fileSize);
             if (!fileData) {
                 fprintf(stderr, "Memory allocation failed for file data\n");
-                fclose(file);
+                close(fd);
                 neo_aa_header_destroy(header);
                 continue;
             }
 
-            fread(fileData, 1, fileSize, file);
-            fclose(file);
+            /* Read the file content into the buffer */
+            ssize_t bytesRead = read(fd, fileData, fileSize);
+            if (bytesRead < 0) {
+                perror("Failed to read file");
+                free(fileData);
+                close(fd);
+                neo_aa_header_destroy(header);
+                continue;
+            }
 
             /* Set the PAT and TYP fields */
             neo_aa_header_set_field_string(header, NEO_AA_FIELD_C("PAT"), strlen(entry->d_name), entry->d_name);
@@ -372,6 +380,7 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
             NeoAAArchiveItem item = neo_aa_archive_item_create_with_header(header);
             if (!item) {
                 fprintf(stderr, "Failed to create archive item for file: %s\n", entry->d_name);
+                close(fd);
                 free(fileData);
                 neo_aa_header_destroy(header);
                 continue;
@@ -388,12 +397,15 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
             NeoAAArchiveItem item = neo_aa_archive_item_create_with_header(header);
             if (!item) {
                 fprintf(stderr, "Failed to create archive item for directory/symlink: %s\n", entry->d_name);
+                close(fd);
                 neo_aa_header_destroy(header);
                 continue;
             }
 
             items[itemsCount++] = item;
         }
+
+        close(fd);
     }
 
     closedir(dir);
