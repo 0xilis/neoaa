@@ -1,0 +1,9 @@
+Package: com.0xilis.neoaa
+Name: neoaa
+Depends: firmware (>= 7.0), com.0xilis.libneoapplearchive
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: Open-Source Apple Archive CLI tool
+Maintainer: Snoolie K
+Author: Snoolie K
+Section: System

@@ -3,3 +3,7 @@ build/
 
 # Ignore .DS_Store files (macOS specific)
 .DS_Store
+
+# Theos related files
+packages/
+.theos/

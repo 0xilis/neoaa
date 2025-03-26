@@ -1,0 +1,16 @@
+ARCHS = arm64
+TARGET := iphone:clang:latest:6.0
+# PREFIX = $(THEOS)/toolchain/Xcode.xctoolchain/usr/bin/
+PREFIX = /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/
+SYSROOT = $(THEOS)/sdks/iPhoneOS14.4.sdk
+
+include $(THEOS)/makefiles/common.mk
+
+TOOL_NAME = neoaa
+
+neoaa_FILES = src/cli/main.c $(wildcard src/lib/libNeoAppleArchive/*.c) $(filter-out src/lib/libNeoAppleArchive/compression/lzfse/src/lzfse_main.c, $(wildcard src/lib/libNeoAppleArchive/compression/lzfse/src/*.c)) src/lib/libNeoAppleArchive/compression/libzbitmap/libzbitmap.c
+neoaa_CFLAGS = -Isrc/lib/libNeoAppleArchive -Isrc/lib/libNeoAppleArchive/compression/libzbitmap -Isrc/lib/libNeoAppleArchive/compression/lzfse/src -Iios-support/ -DOPENSSL_API_COMPAT=30400
+neoaa_LDFLAGS = -L./ios-support/ -lz -lssl -lcrypto
+neoaa_INSTALL_PATH = /usr/bin
+
+include $(THEOS_MAKE_PATH)/tool.mk
