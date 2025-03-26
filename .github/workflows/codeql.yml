@@ -1,0 +1,75 @@
+name: "CodeQL Advanced"
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: '39 0 * * 3'  # Run every Wednesday at 00:39 UTC
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - language: c-cpp
+          build-mode: manual
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Initialize git submodules (lzfse, libzbitmap, etc.)
+    - name: Initialize submodules
+      run: |
+        git submodule update --init --recursive
+
+    # Set up Clang, Make, and dependencies
+    - name: Set up Clang and build the project
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang libplist-dev make
+
+        # Ensure submodules (lzfse, libzbitmap) are built
+        cd src/lib/libNeoAppleArchive/compression/lzfse
+        make  # Build lzfse submodule
+
+        cd ../libzbitmap
+        make  # Build libzbitmap submodule
+
+        # Go back to the root directory and build the project
+        cd ../../../../..
+        make  # Build the main neoaa project
+
+    # List build artifacts (useful for debugging)
+    - name: List build artifacts
+      run: |
+        ls -R build
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+
+    # Create CodeQL database manually with --overwrite flag
+    - name: Create CodeQL database
+      run: |
+        ${CODEQL_DIST}/codeql database create /home/runner/work/_temp/codeql_databases/cpp --language=cpp --command="make" --overwrite
+
+    # Perform CodeQL analysis (only after the project has been built)
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
