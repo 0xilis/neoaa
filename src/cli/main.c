@@ -355,8 +355,7 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
                 neo_aa_header_destroy_nozero(header);
                 continue;
             }
-            symlinkTarget[len] = '\0';  /* Null-terminate the string */
-            neo_aa_header_set_field_string(header, NEO_AA_FIELD_C("LNK"), strlen(symlinkTarget), symlinkTarget);
+            neo_aa_header_set_field_string(header, NEO_AA_FIELD_C("LNK"), len, symlinkTarget);
             neo_aa_header_set_field_string(header, NEO_AA_FIELD_C("PAT"), strlen(entry->d_name), entry->d_name);
             neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("TYP"), 1, 'L');
 #endif
