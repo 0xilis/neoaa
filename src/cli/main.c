@@ -164,7 +164,7 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
         return;
     }
     if (NEOAA_COMPRESS_LZFSE == compress) {
-        neo_aa_archive_plain_compress_write_path(archive, 0x801, outputPath);
+        neo_aa_archive_plain_compress_write_path(archive, NEOAA_COMPRESS_LZFSE, outputPath);
         return;
     }
     neo_aa_archive_plain_write_path(archive, outputPath);
@@ -230,7 +230,7 @@ void wrap_file_in_neo_aa(const char *inputPath, const char *outputPath, NeoAACom
         return;
     }
     if (NEOAA_COMPRESS_LZFSE == compress) {
-        neo_aa_archive_plain_compress_write_path(archive, 0x801, outputPath);
+        neo_aa_archive_plain_compress_write_path(archive, NEOAA_COMPRESS_LZFSE, outputPath);
         return;
     }
     neo_aa_archive_plain_write_path(archive, outputPath);
