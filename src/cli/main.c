@@ -134,7 +134,7 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
     ssize_t bytesRead = fread(data, binarySize, 1, fp);
     fclose(fp);
     if (bytesRead < binarySize) {
-        neo_aa_archive_item_destroy(item);
+        neo_aa_archive_item_destroy_nozero(item);
         fprintf(stderr,"Failed to read the entire file\n");
         return;
     }
@@ -157,8 +157,7 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
     memcpy(itemList, rawInput->items, rawInput->itemCount);
     itemList[rawInput->itemCount] = item;
     free(plainInputArchive);
-    NeoAAArchivePlain archive = neo_aa_archive_plain_create_with_items(itemList, 1);
-    neo_aa_archive_item_destroy_nozero(item);
+    NeoAAArchivePlain archive = neo_aa_archive_plain_create_with_items_nocopy(itemList, rawInput->itemCount + 1);
     neo_aa_archive_plain_destroy_nozero(rawInput);
     if (!archive) {
         fprintf(stderr,"Failed to create NeoAAArchivePlain\n");
@@ -169,6 +168,7 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
         return;
     }
     neo_aa_archive_plain_write_path(archive, outputPath);
+    neo_aa_archive_plain_destroy_nozero(archive);
 }
 
 void wrap_file_in_neo_aa(const char *inputPath, const char *outputPath, NeoAACompression compress) {
@@ -352,7 +352,7 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
             if (len < 0) {
                 perror("readlink failed");
                 close(fd);
-                neo_aa_header_destroy(header);
+                neo_aa_header_destroy_nozero(header);
                 continue;
             }
             symlinkTarget[len] = '\0';  /* Null-terminate the string */
@@ -367,7 +367,7 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
             if (!fileData) {
                 fprintf(stderr, "Memory allocation failed for file data\n");
                 close(fd);
-                neo_aa_header_destroy(header);
+                neo_aa_header_destroy_nozero(header);
                 continue;
             }
 
@@ -377,7 +377,7 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
                 perror("Failed to read file");
                 free(fileData);
                 close(fd);
-                neo_aa_header_destroy(header);
+                neo_aa_header_destroy_nozero(header);
                 continue;
             }
 
@@ -392,7 +392,7 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
                 fprintf(stderr, "Failed to create archive item for file: %s\n", entry->d_name);
                 close(fd);
                 free(fileData);
-                neo_aa_header_destroy(header);
+                neo_aa_header_destroy_nozero(header);
                 continue;
             }
 
@@ -408,7 +408,7 @@ void create_aar_from_directory(const char *dirPath, const char *outputPath) {
             if (!item) {
                 fprintf(stderr, "Failed to create archive item for directory/symlink: %s\n", entry->d_name);
                 close(fd);
-                neo_aa_header_destroy(header);
+                neo_aa_header_destroy_nozero(header);
                 continue;
             }
 
