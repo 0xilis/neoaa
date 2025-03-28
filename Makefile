@@ -10,7 +10,7 @@ NEOAPPLEARCHIVE_DIR = src/lib
 output: $(buildDir)
 	@ # Build libNeoAppleArchive submodule
 	@echo "building libNeoAppleArchive..."
-	$(MAKE) -C $(NEOAPPLEARCHIVE_DIR)
+	$(MAKE) -C $(NEOAPPLEARCHIVE_DIR) EXCLUDE_AEA_SUPPORT=1
 	@mv src/lib/build/usr/lib/libNeoAppleArchive.a build/usr/lib/libNeoAppleArchive.a
 
 	@ # Build neoaa CLI tool
