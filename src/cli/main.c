@@ -387,7 +387,14 @@ static int add_directory_contents_to_archive(const char *dirPath, NeoAAArchiveIt
 #endif
         } else if (S_ISREG(fileStat.st_mode)) {
             /* Handle regular file */
+#ifdef O_SYMLINK
+            /* On macOS but not Linux, O_SYMLINK behaves like O_NOFOLLOW,
+             *  O_NOFOLLOW makes open() fail on symlinks...
+             */
+            int fd = open(fullPath, O_RDONLY | O_SYMLINK);
+#else
             int fd = open(fullPath, O_RDONLY | O_NOFOLLOW);
+#endif
             if (fd < 0) {
                 perror("Failed to open file");
                 neo_aa_header_destroy_nozero(header);
