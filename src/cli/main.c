@@ -318,8 +318,17 @@ static int add_directory_contents_to_archive(const char *dirPath, NeoAAArchiveIt
             items = newItems;
         }
 
+#ifdef O_SYMLINK
+        /* On macOS but not Linux, O_SYMLINK behaves like O_NOFOLLOW,
+         *  O_NOFOLLOW makes open() fail on symlinks...
+         */
+        int fd = open(fullPath, O_RDONLY | O_SYMLINK);
+#else
+        int fd = open(fullPath, O_RDONLY | O_NOFOLLOW);
+#endif
+
         struct stat fileStat;
-        if (lstat(fullPath, &fileStat) < 0) {
+        if (fstat(fd, &fileStat) < 0) {
             perror("Failed to get file info");
             continue;
         }
@@ -341,6 +350,7 @@ static int add_directory_contents_to_archive(const char *dirPath, NeoAAArchiveIt
 #endif
 
         if (S_ISDIR(fileStat.st_mode)) {
+            close(fd);
             /* Handle directory */
             neo_aa_header_set_field_string(header, NEO_AA_FIELD_C("PAT"), strlen(relativePath), relativePath);
             neo_aa_header_set_field_uint(header, NEO_AA_FIELD_C("TYP"), 1, 'D');
@@ -361,6 +371,7 @@ static int add_directory_contents_to_archive(const char *dirPath, NeoAAArchiveIt
                 return result;
             }
         } else if (S_ISLNK(fileStat.st_mode)) {
+            close(fd);
 #if !(defined(_WIN32) || defined(WIN32))
             /* Handle symlink */
             char symlinkTarget[1024];
@@ -387,14 +398,6 @@ static int add_directory_contents_to_archive(const char *dirPath, NeoAAArchiveIt
 #endif
         } else if (S_ISREG(fileStat.st_mode)) {
             /* Handle regular file */
-#ifdef O_SYMLINK
-            /* On macOS but not Linux, O_SYMLINK behaves like O_NOFOLLOW,
-             *  O_NOFOLLOW makes open() fail on symlinks...
-             */
-            int fd = open(fullPath, O_RDONLY | O_SYMLINK);
-#else
-            int fd = open(fullPath, O_RDONLY | O_NOFOLLOW);
-#endif
             if (fd < 0) {
                 perror("Failed to open file");
                 neo_aa_header_destroy_nozero(header);
