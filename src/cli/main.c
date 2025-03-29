@@ -387,7 +387,7 @@ static int add_directory_contents_to_archive(const char *dirPath, NeoAAArchiveIt
 #endif
         } else if (S_ISREG(fileStat.st_mode)) {
             /* Handle regular file */
-            int fd = open(fullPath, O_RDONLY);
+            int fd = open(fullPath, O_RDONLY | O_NOFOLLOW);
             if (fd < 0) {
                 perror("Failed to open file");
                 neo_aa_header_destroy_nozero(header);
