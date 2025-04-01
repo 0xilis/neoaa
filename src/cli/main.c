@@ -15,13 +15,26 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wstrict-prototypes"
 #include <lzfse.h>
+#pragma clang diagnostic pop
 
 #if !(defined(_WIN32) || defined(WIN32))
 #include <sys/types.h>
 #endif
 
 #define OPTSTR "i:o:a:p:f:hv"
+
+struct option long_options[] = {
+    {"input", required_argument, NULL, 'i'},
+    {"output", required_argument, NULL, 'o'},
+    {"path", required_argument, NULL, 'p'},
+    {"file", required_argument, NULL, 'f'},
+    {"add", required_argument, NULL, 'a'},
+    {"help", no_argument, NULL, 'h'},
+    {NULL, 0, NULL, 0}
+};
 
 typedef enum {
     NEOAA_CMD_ARCHIVE,
@@ -521,7 +534,7 @@ int main(int argc, const char * argv[]) {
     
     /* Parse args */
     int opt;
-    while ((opt = getopt(argc, (char* const *)argv, OPTSTR)) != EOF) {
+    while ((opt = getopt_long(argc, (char* const *)argv, OPTSTR, long_options, NULL)) != -1) {
         if (opt == 'i') {
             inputPath = optarg;
         } else if (opt == 'o') {
