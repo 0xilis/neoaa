@@ -523,6 +523,9 @@ int main(int argc, const char * argv[]) {
     } else if (strncmp(commandString, "help", 4) == 0) {
         show_help();
         return 0;
+    } else if (strncmp(commandString, "--help", 6) == 0) {
+        show_help();
+        return 0;
     } else {
         printf("Invalid command.\n");
         show_help();
