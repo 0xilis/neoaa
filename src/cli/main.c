@@ -31,7 +31,7 @@ struct option long_options[] = {
     {"output", required_argument, NULL, 'o'},
     {"path", required_argument, NULL, 'p'},
     {"file", required_argument, NULL, 'f'},
-    {"add", required_argument, NULL, 'a'},
+    {"algorithm", required_argument, NULL, 'a'},
     {"help", no_argument, NULL, 'h'},
     {NULL, 0, NULL, 0}
 };
@@ -54,7 +54,7 @@ typedef enum {
 
 extern char *optarg;
 
-void show_help(void) {
+__attribute__((visibility ("hidden"))) static void show_help(void) {
     printf("Usage: neoaa command <options>\n\n");
     printf("Commands:\n\n");
     printf(" archive: archive the contents of a directory.\n");
@@ -68,13 +68,12 @@ void show_help(void) {
     printf(" -i: path to the input file or directory.\n");
     printf(" -o: path to the output file or directory.\n");
     printf(" -a: algorithm for compression, lzfse (default), zlib, raw (no compression).\n");
-    printf(" -p: specify path of file in project to unwrap.\n");
+    printf(" -p: specify path of file in archive to unwrap.\n");
     /* printf(" -f: path of file to add to the .aar specified in -i.\n"); */
-    printf(" -h: this ;-)\n");
-    printf("\n");
+    printf(" -h: this ;-)\n\n");
 }
 
-void list_neo_aa_files(const char *inputPath) {
+__attribute__((visibility ("hidden"))) static void list_neo_aa_files(const char *inputPath) {
     NeoAAArchiveGeneric genericArchive = neo_aa_archive_generic_from_path(inputPath);
     if (!genericArchive) {
         fprintf(stderr,"Not enough free memory to list files\n");
@@ -104,7 +103,7 @@ void list_neo_aa_files(const char *inputPath) {
     }
 }
 
-void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const char *addPath, NeoAACompression compress) {
+__attribute__((visibility ("hidden"))) static void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const char *addPath, NeoAACompression compress) {
     NeoAAHeader header = neo_aa_header_create();
     if (!header) {
         fprintf(stderr,"Failed to create header\n");
@@ -184,7 +183,7 @@ void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const cha
     neo_aa_archive_plain_destroy_nozero(archive);
 }
 
-void wrap_file_in_neo_aa(const char *inputPath, const char *outputPath, NeoAACompression compress) {
+__attribute__((visibility ("hidden"))) static void wrap_file_in_neo_aa(const char *inputPath, const char *outputPath, NeoAACompression compress) {
     NeoAAHeader header = neo_aa_header_create();
     if (!header) {
         fprintf(stderr,"Failed to create header\n");
@@ -249,7 +248,7 @@ void wrap_file_in_neo_aa(const char *inputPath, const char *outputPath, NeoAACom
     neo_aa_archive_plain_write_path(archive, outputPath);
 }
 
-void unwrap_file_out_of_neo_aa(const char *inputPath, const char *outputPath, char *pathString) {
+__attribute__((visibility ("hidden"))) static void unwrap_file_out_of_neo_aa(const char *inputPath, const char *outputPath, char *pathString) {
     NeoAAArchiveGeneric genericArchive = neo_aa_archive_generic_from_path(inputPath);
     if (!genericArchive) {
         fprintf(stderr,"Not enough free memory to list files\n");
@@ -293,7 +292,7 @@ void unwrap_file_out_of_neo_aa(const char *inputPath, const char *outputPath, ch
 
 /* TODO: Experimental */
 /* Recursively archive directory contents */
-static int add_directory_contents_to_archive(const char *dirPath, NeoAAArchiveItem *items, 
+__attribute__((visibility ("hidden"))) static int add_directory_contents_to_archive(const char *dirPath, NeoAAArchiveItem *items, 
                                           size_t *itemsCount, size_t *itemsMalloc,
                                           const char *basePath) {
     DIR *dir = opendir(dirPath);
@@ -517,6 +516,13 @@ int main(int argc, const char * argv[]) {
         neoaaCommand = NEOAA_CMD_UNWRAP;
     } else if (strncmp(commandString, "version", 7) == 0) {
         neoaaCommand = NEOAA_CMD_VERSION;
+    } else if (strncmp(commandString, "-h", 2) == 0) {
+        /* If the user uses -h without a command, show help */
+        show_help();
+        return 0;
+    } else if (strncmp(commandString, "help", 4) == 0) {
+        show_help();
+        return 0;
     } else {
         printf("Invalid command.\n");
         show_help();
@@ -531,6 +537,7 @@ int main(int argc, const char * argv[]) {
     char *algorithmString = NULL;
     char *pathSpecifierString = NULL;
     char *fileAddString = NULL;
+    int showHelp = 0;
     
     /* Parse args */
     int opt;
@@ -547,9 +554,48 @@ int main(int argc, const char * argv[]) {
             fileAddString = optarg;
         } else if (opt == 'h') {
             /* Show help */
+            showHelp = 1;
+        }
+    }
+    if (showHelp) {
+        if (NEOAA_CMD_ARCHIVE == neoaaCommand) {
+            printf("Usage: neoaa archive --input <input> --output <output>\n\n");
+            printf("Options:\n");
+            printf("-i, --input <input>    path to the input directory to archive\n");
+            printf("-o, --output <output>  path to the output aar\n\n");
+        } else if (NEOAA_CMD_EXTRACT == neoaaCommand) {
+            printf("Usage: neoaa extract --input <input> --output <output>\n\n");
+            printf("Options:\n");
+            printf("-i, --input <input>    path to the input aar to extract\n");
+            printf("-o, --output <output>  path to the output directory for aar\n\n");
+        } else if (NEOAA_CMD_LIST == neoaaCommand) {
+            printf("Usage: neoaa list --input <input>\n\n");
+            printf("Options:\n");
+            printf("-i, --input <input>         path to the input aar to list\n\n");
+        } else if (NEOAA_CMD_ADD == neoaaCommand) {
+            printf("Usage: neoaa add --input <input> --output <output> --file <file> --algorithm <algorithm>\n\n");
+            printf("Options:\n");
+            printf("-i, --input <input>         path to the input aar\n");
+            printf("-o, --output <output>       path to the output aar\n");
+            printf("-f, --file <file>           path to the file to add\n");
+            printf("-a, --algorithm <algorithm> compression algorithm of aar\n\n");
+        } else if (NEOAA_CMD_WRAP == neoaaCommand) {
+            printf("Usage: neoaa wrap --input <input> --output <output> --algorithm <algorithm>\n\n");
+            printf("Options:\n");
+            printf("-i, --input <input>         path to the input file to wrap\n");
+            printf("-o, --output <output>       path to the output aar\n");
+            printf("-a, --algorithm <algorithm> compression algorithm of aar\n\n");
+        } else if (NEOAA_CMD_UNWRAP == neoaaCommand) {
+            printf("Usage: neoaa unwrap --input <input> --output <output> --path <path>\n\n");
+            printf("Options:\n");
+            printf("-i, --input <input>    path to the input aar to unwrap\n");
+            printf("-o, --output <output>  path to the output file from the aar\n");
+            printf("-p, --path <path>      path of the file in the aar to unwrap\n\n");
+        } else {
             show_help();
             return 0;
         }
+        return 0;
     }
     
     NeoAACompression compress;
