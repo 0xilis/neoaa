@@ -50,6 +50,7 @@ typedef enum {
     NEOAA_COMPRESS_LZFSE,
     NEOAA_COMPRESS_RAW,
     NEOAA_COMPRESS_ZLIB,
+    NEOAA_COMPRESS_LZBITMAP,
 } NeoAACompression;
 
 extern char *optarg;
@@ -67,7 +68,7 @@ __attribute__((visibility ("hidden"))) static void show_help(void) {
     printf("Options:\n\n");
     printf(" -i: path to the input file or directory.\n");
     printf(" -o: path to the output file or directory.\n");
-    printf(" -a: algorithm for compression, lzfse (default), zlib, raw (no compression).\n");
+    printf(" -a: algorithm for compression, lzfse (default), zlib, lzbitmap, raw (no compression).\n");
     printf(" -p: specify path of file in archive to unwrap.\n");
     /* printf(" -f: path of file to add to the .aar specified in -i.\n"); */
     printf(" -h: this ;-)\n\n");
@@ -176,7 +177,13 @@ __attribute__((visibility ("hidden"))) static void add_file_in_neo_aa(const char
         return;
     }
     if (NEOAA_COMPRESS_LZFSE == compress) {
-        neo_aa_archive_plain_compress_write_path(archive, NEOAA_COMPRESS_LZFSE, outputPath);
+        neo_aa_archive_plain_compress_write_path(archive, NEO_AA_COMPRESSION_LZFSE, outputPath);
+        return;
+    } else if (NEOAA_COMPRESS_ZLIB == compress) {
+        neo_aa_archive_plain_compress_write_path(archive, NEO_AA_COMPRESSION_ZLIB, outputPath);
+        return;
+    } else if (NEOAA_COMPRESS_LZBITMAP == compress) {
+        neo_aa_archive_plain_compress_write_path(archive, NEO_AA_COMPRESSION_LZBITMAP, outputPath);
         return;
     }
     neo_aa_archive_plain_write_path(archive, outputPath);
@@ -242,7 +249,13 @@ __attribute__((visibility ("hidden"))) static void wrap_file_in_neo_aa(const cha
         return;
     }
     if (NEOAA_COMPRESS_LZFSE == compress) {
-        neo_aa_archive_plain_compress_write_path(archive, NEOAA_COMPRESS_LZFSE, outputPath);
+        neo_aa_archive_plain_compress_write_path(archive, NEO_AA_COMPRESSION_LZFSE, outputPath);
+        return;
+    } else if (NEOAA_COMPRESS_ZLIB == compress) {
+        neo_aa_archive_plain_compress_write_path(archive, NEO_AA_COMPRESSION_ZLIB, outputPath);
+        return;
+    } else if (NEOAA_COMPRESS_LZBITMAP == compress) {
+        neo_aa_archive_plain_compress_write_path(archive, NEO_AA_COMPRESSION_LZBITMAP, outputPath);
         return;
     }
     neo_aa_archive_plain_write_path(archive, outputPath);
@@ -407,6 +420,8 @@ int main(int argc, const char * argv[]) {
             compress = NEOAA_COMPRESS_ZLIB;
         } else if (strncmp(algorithmString, "lzfse", 5)) {
             compress = NEOAA_COMPRESS_LZFSE;
+        } else if (strncmp(algorithmString, "lzbitmap", 8)) {
+            compress = NEOAA_COMPRESS_LZBITMAP;
         } else {
             /* Default compression is LZFSE */
             compress = NEOAA_COMPRESS_LZFSE;
@@ -471,7 +486,15 @@ int main(int argc, const char * argv[]) {
         }
 
         /* Write the archive */
-        neo_aa_archive_plain_write_path(archive, outputPath);
+        if (NEOAA_COMPRESS_LZFSE == compress) {
+            neo_aa_archive_plain_compress_write_path(archive, NEO_AA_COMPRESSION_LZFSE, outputPath);
+        } else if (NEOAA_COMPRESS_RAW == compress) {
+            neo_aa_archive_plain_write_path(archive, outputPath);
+        } else if (NEOAA_COMPRESS_ZLIB == compress) {
+            neo_aa_archive_plain_compress_write_path(archive, NEO_AA_COMPRESSION_ZLIB, outputPath);
+        } else {
+            neo_aa_archive_plain_compress_write_path(archive, NEO_AA_COMPRESSION_LZBITMAP, outputPath);
+        }
         neo_aa_archive_plain_destroy_nozero(archive);
     }
     return 0;
