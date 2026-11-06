@@ -406,7 +406,7 @@ int main(int argc, const char * argv[]) {
     
     /* NEOAA_CMD_VERSION is the only command where inputPath is not needed */
     if (NEOAA_CMD_VERSION == neoaaCommand) {
-        printf("1.0 Beta 2\n");
+        printf("1.0 Beta 3\n");
         return 0;
     }
     if (!inputPath) {
