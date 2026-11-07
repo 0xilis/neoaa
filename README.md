@@ -33,7 +33,7 @@ Options:
 
  -i: path to the input file or directory.
  -o: path to the output file or directory.
- -a: algorithm for compression, lzfse (default), zlib, raw (no compression).
+ -a: algorithm for compression, lzfse (default), zlib, lzbitmap, raw (no compression).
  -p: specify path of file in project to unwrap.
  -h: this ;-)
 
