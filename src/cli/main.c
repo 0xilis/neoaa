@@ -61,7 +61,7 @@ __attribute__((visibility ("hidden"))) static void show_help(void) {
     printf("Options:\n\n");
     printf(" -i: path to the input file or directory.\n");
     printf(" -o: path to the output file or directory.\n");
-    printf(" -a: algorithm for compression, lzfse (default), zlib, lzbitmap, raw (no compression).\n");
+    printf(" -a: algorithm for compression, lzfse (default), zlib, lzbitmap, lzraven, raw (no compression).\n");
     printf(" -p: specify path of file in archive to unwrap.\n");
     /* printf(" -f: path of file to add to the .aar specified in -i.\n"); */
     printf(" -h: this ;-)\n\n");
@@ -395,6 +395,8 @@ int main(int argc, const char * argv[]) {
             compress = NEO_AA_COMPRESSION_LZFSE;
         } else if (!strncmp(algorithmString, "lzbitmap", 8)) {
             compress = NEO_AA_COMPRESSION_LZBITMAP;
+        } else if (!strncmp(algorithmString, "lzraven", 7)) {
+            compress = NEO_AA_COMPRESSION_LZRAVEN;
         } else {
             /* Default compression is LZFSE */
             compress = NEO_AA_COMPRESSION_LZFSE;
