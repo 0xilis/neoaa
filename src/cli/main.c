@@ -74,6 +74,7 @@ __attribute__((visibility ("hidden"))) static void list_neo_aa_files(const char 
         return;
     }
     NeoAAArchivePlain archive = genericArchive->raw;
+    free(genericArchive);
     for (int i = 0; i < archive->itemCount; i++) {
         /*
          * We loop through all items to find the PAT field key.
@@ -95,6 +96,7 @@ __attribute__((visibility ("hidden"))) static void list_neo_aa_files(const char 
         printf("%s\n",patStr);
         free(patStr);
     }
+    neo_aa_archive_plain_destroy_nozero(archive);
 }
 
 __attribute__((visibility ("hidden"))) static void add_file_in_neo_aa(const char *inputPath, const char *outputPath, const char *addPath, int compress) {
@@ -126,9 +128,24 @@ __attribute__((visibility ("hidden"))) static void add_file_in_neo_aa(const char
         fprintf(stderr,"Failed to open input path\n");
         return;
     }
-    fseek(fp, 0, SEEK_END);
-    size_t binarySize = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
+    if (fseeko(fp, 0, SEEK_END) != 0) {
+        fprintf(stderr,"reached SEEK_END. If you see this, something is seriously wrong! Please make an issue with the archive file so I (or whoever is maintaining neoaa) can investigate.\n");
+        fclose(fp);
+        return;
+    }
+    off_t fileSize = ftello(fp);
+    if (fileSize < 0 || fseeko(fp, 0, SEEK_SET) != 0) {
+        fprintf(stderr,"File size is smaller. If you see this, something is seriously wrong! Please make an issue with the archive file so I (or whoever is maintaining neoaa) can investigate.\n");
+        fclose(fp);
+        return;
+    }
+    uint64_t binarySize = (uint64_t)fileSize;
+    if (binarySize < 6) {
+        /* Compressed or uncompressed, a .aar *cannot* be less than 6 bytes. */
+        fclose(fp);
+        fprintf(stderr,"AAR is less than 6 bytes \n");
+        return;
+    }
     /* allocate our uncompressed data */
     uint8_t *data = malloc(binarySize);
     if (!data) {
@@ -202,9 +219,24 @@ __attribute__((visibility ("hidden"))) static void wrap_file_in_neo_aa(const cha
         fprintf(stderr,"Failed to open input path\n");
         return;
     }
-    fseek(fp, 0, SEEK_END);
-    size_t binarySize = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
+    if (fseeko(fp, 0, SEEK_END) != 0) {
+        fprintf(stderr,"reached SEEK_END. If you see this, something is seriously wrong! Please make an issue with the archive file so I (or whoever is maintaining neoaa) can investigate.\n");
+        fclose(fp);
+        return;
+    }
+    off_t fileSize = ftello(fp);
+    if (fileSize < 0 || fseeko(fp, 0, SEEK_SET) != 0) {
+        fprintf(stderr,"File size is smaller. If you see this, something is seriously wrong! Please make an issue with the archive file so I (or whoever is maintaining neoaa) can investigate.\n");
+        fclose(fp);
+        return;
+    }
+    uint64_t binarySize = (uint64_t)fileSize;
+    if (binarySize < 6) {
+        /* Compressed or uncompressed, a .aar *cannot* be less than 6 bytes. */
+        fclose(fp);
+        fprintf(stderr,"AAR is less than 6 bytes \n");
+        return;
+    }
     /* allocate our uncompressed data */
     uint8_t *data = malloc(binarySize);
     if (!data) {
@@ -232,6 +264,7 @@ __attribute__((visibility ("hidden"))) static void wrap_file_in_neo_aa(const cha
         return;
     }
     neo_aa_archive_plain_compress_write_path(archive, compress, outputPath);
+    neo_aa_archive_plain_destroy_nozero(archive);
 }
 
 __attribute__((visibility ("hidden"))) static void unwrap_file_out_of_neo_aa(const char *inputPath, const char *outputPath, char *pathString) {
@@ -241,6 +274,7 @@ __attribute__((visibility ("hidden"))) static void unwrap_file_out_of_neo_aa(con
         return;
     }
     NeoAAArchivePlain archive = genericArchive->raw;
+    free(genericArchive);
     for (int i = 0; i < archive->itemCount; i++) {
         /*
          * We loop through all items to find the PAT field key.
@@ -265,15 +299,18 @@ __attribute__((visibility ("hidden"))) static void unwrap_file_out_of_neo_aa(con
             FILE *fp = fopen(outputPath, "w");
             if (!fp) {
                 fprintf(stderr,"Failed to open outputPath.\n");
+                neo_aa_archive_plain_destroy_nozero(archive);
                 return;
             }
             fwrite(item->encodedBlobData, item->encodedBlobDataSize, 1, fp);
             fclose(fp);
+            neo_aa_archive_plain_destroy_nozero(archive);
             return;
         }
         free(patStr);
     }
     printf("Could not find file at the specified path in the project.\n");
+    neo_aa_archive_plain_destroy_nozero(archive);
 }
 
 int main(int argc, const char * argv[]) {
